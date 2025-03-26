@@ -12,67 +12,23 @@ export interface Address {
 }
 
 export interface Client {
-  // Basisdaten
   id: string;
-  name: string;
-  type: ClientType;
-  contactName: string;
+  firstName: string;
+  lastName: string;
+  type: 'private' | 'business';
+  companyName?: string;
   email: string;
   phone: string;
-  address?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-
-  // Personendaten (Privatkunden)
-  firstName?: string;
-  lastName?: string;
-  salutation?: Salutation;
-  birthDate?: string;
-
-  // Firmendaten (Firmenkunden)
-  companyName?: string;
-  industry?: string;
-  vatId?: string;
-  companySize?: CompanySize;
-
-  // Kontaktdaten
-  primaryContact?: string;
-  mobilePhone?: string;
-  preferredContactMethod: PreferredContactMethod;
-  whatsappAvailable: boolean;
-  signalAvailable: boolean;
-
-  // Adressdaten
   street: string;
   postalCode: string;
   city: string;
   country: string;
-  billingAddressSameAsMain: boolean;
-  billingAddress?: Address;
-
-  // Cateringspezifische Daten
-  dietaryPreferences?: string[];
-  allergies?: string[];
-  preferences?: string;
   previousOrders: number;
   totalRevenue: number;
   lastEventDate?: string;
-
-  // Vertragsdaten
-  paymentTerms?: string;
-  paymentMethod?: PaymentMethod;
-  accountManager?: string;
-
-  // Marketingdaten
-  source?: string;
-  newsletter: boolean;
-  referralSource?: string;
-  marketingConsent: boolean;
-
-  // Notizen und Historie
-  tags?: string[];
   customerSince: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ClientFormData {
@@ -168,30 +124,79 @@ export interface Event {
   updatedAt: string;
 }
 
+export interface ProposalItem {
+  id: string;
+  category: 'food' | 'beverage' | 'staff' | 'equipment' | 'other';
+  name: string;
+  description?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+  subItems?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    quantity?: number;
+    unit?: string;
+  }>;
+}
+
 export interface Proposal {
   id: string;
-  clientId: string;
-  client?: Client;
+  number: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  title: string;
+  client: Client;
   eventName: string;
   eventDate: string;
-  amount: number;
-  status: 'entwurf' | 'gesendet' | 'akzeptiert' | 'abgelehnt';
-  validUntil: string;
-  eventId?: string;
+  eventStartTime: string;
+  eventEndTime: string;
+  eventLocation: string;
+  eventAddress?: string;
+  eventType: string;
+  orderType: 'self_pickup' | 'delivery' | 'delivery_with_staff' | 'with_staff';
+  guests: number;
+  introText?: string;
   items: ProposalItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  depositAmount?: number;
+  depositDueDate?: string;
+  paymentTerms: string;
+  validUntil: string;
+  termsAndConditions: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ProposalItem {
-  id: string;
-  category: 'menu' | 'beverage' | 'staff' | 'equipment' | 'venue' | 'other';
-  name: string;
-  description?: string;
-  quantity: number;
-  unitPrice: number;
-  unit: string;
-  totalPrice: number;
+export interface ProposalFormData {
+  clientId: string;
+  client: Client | null;
+  title: string;
+  eventName: string;
+  eventDate: string;
+  eventStartTime: string;
+  eventEndTime: string;
+  eventLocation: string;
+  eventAddress: string;
+  eventType: string;
+  orderType: 'self_pickup' | 'delivery' | 'delivery_with_staff' | 'with_staff';
+  guests: number;
+  introText: string;
+  items: ProposalItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  depositAmount: number;
+  depositDueDate: string;
+  paymentTerms: string;
+  validUntil: string;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected';
+  termsAndConditions: string;
 }
 
 export interface MenuItem {
@@ -356,17 +361,25 @@ export interface EventFormData {
   type: string;
 }
 
-export interface ProposalFormData {
-  client: string;
-  eventName: string;
-  eventDate: string;
-  validUntil: string;
-  items: {
-    category: string;
-    name: string;
-    description?: string;
-    quantity: number;
-    unitPrice: number;
-    unit: string;
-  }[];
-} 
+export interface ProposalFilters {
+  status?: Proposal['status'];
+  orderType?: Proposal['orderType'];
+  search?: string;
+  dateRange?: {
+    start?: string;
+    end?: string;
+  };
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export * from './client';
+export * from './proposal'; 

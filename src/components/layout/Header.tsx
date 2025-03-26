@@ -1,79 +1,51 @@
 import React from 'react';
-import { 
-  Box, 
-  Flex, 
-  Heading, 
-  Spacer, 
-  IconButton, 
-  Menu, 
-  MenuButton, 
-  MenuList, 
-  MenuItem, 
-  Avatar, 
-  HStack, 
-  Text, 
-  InputGroup, 
-  Input, 
-  InputLeftElement 
-} from '@chakra-ui/react';
-import { FiBell, FiSearch, FiChevronDown } from 'react-icons/fi';
-import { useLocation } from 'react-router-dom';
+import { Box, Flex, Input, InputGroup, InputLeftElement, IconButton, Avatar, Menu, MenuButton, MenuList, MenuItem, useColorModeValue } from '@chakra-ui/react';
+import { FiSearch, FiBell, FiSettings } from 'react-icons/fi';
 
 const Header: React.FC = () => {
-  const location = useLocation();
-  
-  // Dynamischen Titel basierend auf dem aktuellen Pfad generieren
-  const getTitle = () => {
-    const path = location.pathname;
-    if (path === '/') return 'Dashboard';
-    if (path.startsWith('/events')) return 'Events';
-    if (path.startsWith('/proposals')) return 'Angebote';
-    if (path.startsWith('/clients')) return 'Kunden';
-    if (path.startsWith('/inventory')) return 'Material';
-    if (path.startsWith('/staff')) return 'Personal';
-    if (path.startsWith('/kitchen')) return 'Küche';
-    if (path.startsWith('/reports')) return 'Berichte';
-    if (path.startsWith('/settings')) return 'Einstellungen';
-    return 'CateringPro';
-  };
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   return (
-    <Box as="header" bg="white" boxShadow="sm" px={6} py={4}>
-      <Flex alignItems="center">
-        <Heading size="lg" color="gray.800">{getTitle()}</Heading>
-        <Spacer />
-        
-        <HStack spacing={4}>
-          <InputGroup maxW="300px">
-            <InputLeftElement pointerEvents="none">
-              <FiSearch color="gray.300" />
-            </InputLeftElement>
-            <Input placeholder="Suchen..." borderRadius="full" />
-          </InputGroup>
-          
+    <Box
+      as="header"
+      bg={bgColor}
+      borderBottom="1px"
+      borderColor={borderColor}
+      px={4}
+      py={3}
+      position="sticky"
+      top={0}
+      zIndex={10}
+    >
+      <Flex align="center" justify="space-between">
+        <InputGroup maxW="400px">
+          <InputLeftElement pointerEvents="none">
+            <FiSearch color="gray.400" />
+          </InputLeftElement>
+          <Input placeholder="Suchen..." />
+        </InputGroup>
+
+        <Flex align="center" gap={4}>
           <IconButton
             aria-label="Benachrichtigungen"
             icon={<FiBell />}
             variant="ghost"
-            fontSize="20px"
+            size="md"
           />
-          
           <Menu>
-            <MenuButton>
-              <HStack>
-                <Avatar size="sm" name="Max Mustermann" />
-                <Text display={{ base: 'none', md: 'block' }}>Max Mustermann</Text>
-                <FiChevronDown />
-              </HStack>
-            </MenuButton>
+            <MenuButton
+              as={IconButton}
+              aria-label="Benutzermenü"
+              icon={<Avatar size="sm" name="Benutzer" />}
+              variant="ghost"
+            />
             <MenuList>
-              <MenuItem>Profil</MenuItem>
-              <MenuItem>Einstellungen</MenuItem>
-              <MenuItem>Hilfe</MenuItem>
+              <MenuItem icon={<FiSettings />}>Einstellungen</MenuItem>
               <MenuItem>Abmelden</MenuItem>
             </MenuList>
           </Menu>
-        </HStack>
+        </Flex>
       </Flex>
     </Box>
   );

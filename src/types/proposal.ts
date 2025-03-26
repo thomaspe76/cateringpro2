@@ -1,6 +1,8 @@
-export type OrderType = 'with_staff' | 'with_staff_and_delivery' | 'delivery_only' | 'self_pickup';
-export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
-export type ProposalItemCategory = 'food' | 'beverages' | 'staff' | 'delivery' | 'equipment' | 'other';
+import { Client } from './client';
+
+export type ProposalStatus = 'draft' | 'sent' | 'accepted' | 'rejected';
+export type OrderType = 'self_pickup' | 'delivery' | 'delivery_with_staff' | 'with_staff';
+export type ItemCategory = 'food' | 'beverage' | 'staff' | 'equipment' | 'other';
 
 export interface CompanyInfo {
   name: string;
@@ -8,7 +10,6 @@ export interface CompanyInfo {
   phone: string;
   email: string;
   website?: string;
-  logo?: string;
   taxId?: string;
   vatId?: string;
 }
@@ -16,113 +17,45 @@ export interface CompanyInfo {
 export interface ProposalSubItem {
   id: string;
   name: string;
-  quantity: number;
-  unit: string;
-  price: number;
-  description?: string;
+  quantity?: number;
+  unit?: string;
+  price?: number;
 }
 
 export interface ProposalItem {
   id: string;
-  category: ProposalItemCategory;
   name: string;
   description?: string;
   quantity: number;
-  unit: string;
-  price: number;
-  total: number;
-  subItems?: ProposalSubItem[];
-  notes?: string;
+  unit?: string;
+  unitPrice: number;
+  totalPrice: number;
+  category: 'food' | 'beverage' | 'staff' | 'equipment' | 'other';
 }
 
-export interface Proposal {
+export interface ProposalHistory {
   id: string;
-  number: string;
-  clientId: string;
-  eventId?: string;
-  eventName: string;
-  orderType: OrderType;
-  status: ProposalStatus;
-  createdAt: string;
-  updatedAt: string;
-  validUntil: string;
-  expiryDate: string;
-  introText: string;
-  items: ProposalItem[];
-  subtotal: number;
-  taxRate: number;
-  taxAmount: number;
-  totalAmount: number;
-  notes?: string;
-  termsAndConditions?: string;
-  paymentTerms?: string;
-  companyInfo: CompanyInfo;
-  clientInfo: {
-    name: string;
-    address: string;
-    contactPerson?: string;
-    email: string;
-    phone?: string;
-  };
-  settings: {
-    language: string;
-    currency: string;
-    dateFormat: string;
-    timeFormat: string;
-    showPrices: boolean;
-    showTaxes: boolean;
-    showTotals: boolean;
-  };
-  emailTemplates: {
-    subject: string;
-    body: string;
-    footer?: string;
-  };
-  tags?: string[];
-  attachments?: {
-    id: string;
-    name: string;
-    type: string;
-    url: string;
-    size: number;
-  }[];
-  history: {
-    id: string;
-    date: string;
-    action: string;
-    userId: string;
-    details?: string;
-  }[];
+  date: string;
+  action: string;
+  details: string;
+  user: string;
 }
 
-export interface ProposalFormData {
-  clientId: string;
-  eventId?: string;
-  eventName: string;
-  eventDate: string;
-  orderType: OrderType;
-  introText: string;
-  expiryDate: string;
-  eventFormat: string;
-  items: ProposalItem[];
-  taxRate: number;
-  discount?: {
-    type: 'percentage' | 'fixed';
-    value: number;
-  };
-  paymentInstructions: string;
-  depositAmount: number;
-  termsAndConditions: string;
-  tags: string[];
-}
-
-export interface ProposalEmailTemplate {
+export interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
   body: string;
-  variables: string[];
-  isDefault: boolean;
+  isDefault?: boolean;
+}
+
+export interface ProposalDisplaySettings {
+  template: string;
+  language: string;
+  currency: string;
+  taxRate: number;
+  showPrices: boolean;
+  showSubItems: boolean;
 }
 
 export interface ProposalSettings {
@@ -137,4 +70,57 @@ export interface ProposalSettings {
     name: string;
     color: string;
   }[];
+  display: ProposalDisplaySettings;
+}
+
+export interface Proposal {
+  id: string;
+  number: string;
+  clientId: string;
+  eventName: string;
+  eventDate: string;
+  eventStartTime: string;
+  eventEndTime: string;
+  guests: number;
+  eventLocation: string;
+  items: ProposalItem[];
+  taxRate: number;
+  notes: string;
+  status: ProposalStatus;
+  totalAmount: number;
+  taxAmount: number;
+  finalAmount: number;
+  orderType: OrderType;
+  subtotal: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalFormData {
+  clientId: string;
+  title: string;
+  eventName: string;
+  eventDate: string;
+  eventTime?: string;
+  eventStartTime: string;
+  eventEndTime: string;
+  eventLocation: string;
+  eventAddress?: string;
+  eventType: string;
+  orderType: OrderType;
+  guests: number;
+  location: string;
+  items: ProposalItem[];
+  taxRate: number;
+  notes: string;
+  introText: string;
+}
+
+export interface ProposalEmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  variables: string[];
+  isDefault: boolean;
 } 

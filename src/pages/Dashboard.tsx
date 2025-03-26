@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Box, 
-  Grid, 
   Heading, 
   Stat, 
   StatLabel, 
@@ -9,19 +8,10 @@ import {
   StatHelpText, 
   SimpleGrid, 
   Flex, 
-  Text, 
-  Button, 
-  Icon, 
-  HStack,
+  Icon,
   useColorModeValue 
 } from '@chakra-ui/react';
-import { FiTrendingUp, FiCalendar, FiClock, FiUsers, FiPlus } from 'react-icons/fi';
-
-// Dashboard-Komponenten (später in eigene Dateien auslagern)
-import CalendarView from '../components/dashboard/CalendarView';
-import TasksList from '../components/dashboard/TasksList';
-import UpcomingEvents from '../components/dashboard/UpcomingEvents';
-import RevenueChart from '../components/dashboard/RevenueChart';
+import { FiTrendingUp, FiCalendar, FiClock, FiUsers } from 'react-icons/fi';
 
 interface StatCardProps {
   label: string;
@@ -71,19 +61,10 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, change, icon, colorSc
 };
 
 const Dashboard: React.FC = () => {
-  const bgColor = useColorModeValue('white', 'gray.700');
-  
   return (
     <Box>
-      <Flex justifyContent="space-between" alignItems="center" mb={6}>
-        <Heading size="lg">Dashboard</Heading>
-        <HStack>
-          <Button leftIcon={<FiCalendar />} variant="outline">Diese Woche</Button>
-          <Button leftIcon={<FiPlus />} colorScheme="blue">Neues Event</Button>
-        </HStack>
-      </Flex>
+      <Heading size="lg" mb={6}>Dashboard</Heading>
 
-      {/* KPI-Karten */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={5} mb={6}>
         <StatCard 
           label="Gesamtumsatz" 
@@ -114,35 +95,6 @@ const Dashboard: React.FC = () => {
           colorScheme="purple" 
         />
       </SimpleGrid>
-
-      {/* Hauptinhaltsbereich */}
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 300px" }} gap={6}>
-        <Box>
-          <Box bg={bgColor} borderRadius="lg" boxShadow="sm" mb={6} p={4}>
-            <Heading size="md" mb={4}>Umsatzentwicklung</Heading>
-            <Box h="220px">
-              <RevenueChart />
-            </Box>
-          </Box>
-          
-          <Box bg={bgColor} borderRadius="lg" boxShadow="sm" p={4}>
-            <Heading size="md" mb={4}>Kalender</Heading>
-            <CalendarView />
-          </Box>
-        </Box>
-        
-        <Box>
-          <Box bg={bgColor} borderRadius="lg" boxShadow="sm" mb={6} p={4}>
-            <Heading size="md" mb={4}>Ausstehende Aufgaben</Heading>
-            <TasksList />
-          </Box>
-          
-          <Box bg={bgColor} borderRadius="lg" boxShadow="sm" p={4}>
-            <Heading size="md" mb={4}>Anstehende Events</Heading>
-            <UpcomingEvents />
-          </Box>
-        </Box>
-      </Grid>
     </Box>
   );
 };

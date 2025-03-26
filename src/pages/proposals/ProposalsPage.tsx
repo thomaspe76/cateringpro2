@@ -47,6 +47,11 @@ import {
   FormControl,
   FormLabel,
   Input as ChakraInput,
+  Icon,
+  Tabs,
+  TabList,
+  Tab,
+  Spinner,
 } from '@chakra-ui/react';
 import { 
   FiMoreVertical, 
@@ -67,17 +72,24 @@ import {
   FiUsers,
   FiBox,
   FiShoppingCart,
+  FiAlertCircle,
+  FiPackage,
+  FiArrowUp,
+  FiArrowDown,
 } from 'react-icons/fi';
-import { Proposal, ProposalStatus, OrderType } from '../../types/proposal';
+import { Proposal, ProposalStatus, OrderType } from '../../types';
 import { format, isAfter, isBefore, parse } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { mockProposals } from '../../mock/proposals';
+import OrderTypeIcon from '../../components/proposals/OrderTypeIcon';
+import ProposalStatusBadge from '../../components/proposals/ProposalStatusBadge';
+import { ProposalPdfPreview } from '../../components/proposals/ProposalPdfPreview';
+import { proposalService } from '../../services/proposalService';
 
 const ProposalsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [proposals, setProposals] = useState<Proposal[]>(mockProposals);
-  const [filteredProposals, setFilteredProposals] = useState<Proposal[]>(mockProposals);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [filteredProposals, setFilteredProposals] = useState<Proposal[]>([]);
   const [selectedProposals, setSelectedProposals] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderType | 'all'>('all');
@@ -86,83 +98,128 @@ const ProposalsPage: React.FC = () => {
     start: '',
     end: '',
   });
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Proposal; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Proposal | ''; direction: 'asc' | 'desc' }>({ key: '', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isPdfPreviewOpen, onOpen: onPdfPreviewOpen, onClose: onPdfPreviewClose } = useDisclosure();
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const toast = useToast();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const bgColor = useColorModeValue('white', 'gray.700');
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const [activeTab, setActiveTab] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Filter und Sortierung
+  // Lade Angebote beim Start
   useEffect(() => {
+    loadProposals();
+  }, []);
+
+  const loadProposals = async () => {
+    setIsLoading(true);
+    try {
+      const response = await proposalService.getProposals();
+      setProposals(response);
+      setFilteredProposals(response);
+    } catch (error) {
+      console.error('Fehler beim Laden der Angebote:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Die Angebote konnten nicht geladen werden.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterProposals = () => {
     let filtered = [...proposals];
 
-    // Status-Filter
+    // Statusfilter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(proposal => proposal.status === statusFilter);
     }
 
-    // Bestelltyp-Filter
+    // Auftragstyp-Filter
     if (orderTypeFilter !== 'all') {
       filtered = filtered.filter(proposal => proposal.orderType === orderTypeFilter);
-    }
-
-    // Datumsbereich-Filter
-    if (dateRange.start && dateRange.end) {
-      filtered = filtered.filter(proposal => {
-        const proposalDate = new Date(proposal.createdAt);
-        return isAfter(proposalDate, parse(dateRange.start, 'yyyy-MM-dd', new Date())) &&
-               isBefore(proposalDate, parse(dateRange.end, 'yyyy-MM-dd', new Date()));
-      });
     }
 
     // Suchfilter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(proposal => 
+      filtered = filtered.filter(proposal =>
         proposal.number.toLowerCase().includes(query) ||
-        proposal.clientId.toLowerCase().includes(query) ||
-        proposal.eventName.toLowerCase().includes(query)
+        proposal.eventName.toLowerCase().includes(query) ||
+        proposal.totalAmount.toString().includes(query)
       );
     }
 
-    // Sortierung
-    if (sortConfig) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        
-        if (aValue === undefined || bValue === undefined) return 0;
-        
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
+    // Datumsfilter
+    if (dateRange.start) {
+      filtered = filtered.filter(proposal => {
+        return isAfter(new Date(proposal.eventDate), new Date(dateRange.start));
+      });
+    }
+    if (dateRange.end) {
+      filtered = filtered.filter(proposal => {
+        return isBefore(new Date(proposal.eventDate), new Date(dateRange.end));
       });
     }
 
-    setFilteredProposals(filtered);
-  }, [proposals, statusFilter, orderTypeFilter, dateRange, searchQuery, sortConfig]);
+    return filtered;
+  };
 
-  // Paginierung
-  const totalPages = Math.ceil(filteredProposals.length / itemsPerPage);
-  const paginatedProposals = filteredProposals.slice(
+  const handleSort = (key: keyof Proposal) => {
+    if (sortConfig.key === key) {
+      setSortConfig({
+        key,
+        direction: sortConfig.direction === 'asc' ? 'desc' : 'asc'
+      });
+    } else {
+      setSortConfig({ key, direction: 'asc' });
+    }
+  };
+
+  const sortProposals = (proposals: Proposal[]) => {
+    if (!sortConfig.key) return proposals;
+
+    return [...proposals].sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof Proposal];
+      const bValue = b[sortConfig.key as keyof Proposal];
+
+      if (aValue === undefined || bValue === undefined) return 0;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' 
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      if (aValue instanceof Date && bValue instanceof Date) {
+        return sortConfig.direction === 'asc'
+          ? aValue.getTime() - bValue.getTime()
+          : bValue.getTime() - aValue.getTime();
+      }
+
+      return 0;
+    });
+  };
+
+  const paginatedProposals = sortProposals(filterProposals()).slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  const handleSort = (key: keyof Proposal) => {
-    setSortConfig(current => ({
-      key,
-      direction: current?.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
 
   const handleDelete = (proposal: Proposal) => {
     setSelectedProposal(proposal);
@@ -183,29 +240,18 @@ const ProposalsPage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: ProposalStatus) => {
-    const colors = {
+  const getStatusColor = (status: ProposalStatus): string => {
+    const colors: Record<ProposalStatus, string> = {
       draft: 'gray',
       sent: 'blue',
       accepted: 'green',
       rejected: 'red',
-      expired: 'orange',
     };
     return colors[status];
   };
 
-  const getOrderTypeIcon = (type: OrderType) => {
-    const icons = {
-      with_staff: FiUsers,
-      with_staff_and_delivery: FiTruck,
-      delivery_only: FiBox,
-      self_pickup: FiShoppingCart,
-    };
-    return icons[type];
-  };
-
   const exportToCSV = () => {
-    const headers = ['Nummer', 'Datum', 'Kunde', 'Veranstaltung', 'Bestelltyp', 'Betrag', 'Status', 'Ablaufdatum'];
+    const headers = ['Nummer', 'Datum', 'Kunde', 'Veranstaltung', 'Bestelltyp', 'Betrag', 'Status', 'Veranstaltungsdatum'];
     const csvContent = [
       headers.join(','),
       ...filteredProposals.map(proposal => [
@@ -216,7 +262,7 @@ const ProposalsPage: React.FC = () => {
         proposal.orderType,
         proposal.totalAmount,
         proposal.status,
-        proposal.expiryDate
+        proposal.eventDate
       ].join(','))
     ].join('\n');
 
@@ -229,7 +275,7 @@ const ProposalsPage: React.FC = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedProposals(paginatedProposals.map(p => p.id));
+      setSelectedProposals(filteredProposals.map(p => p.id));
     } else {
       setSelectedProposals([]);
     }
@@ -243,132 +289,190 @@ const ProposalsPage: React.FC = () => {
     );
   };
 
+  const handleDownloadPDF = async (proposal: Proposal) => {
+    setSelectedProposal(proposal);
+    onPdfPreviewOpen();
+  };
+
+  const handleViewProposal = (id: string) => {
+    navigate(`/proposals/${id}`);
+  };
+
+  const handleEditProposal = (id: string) => {
+    navigate(`/proposals/${id}/edit`);
+  };
+
+  const handleCreateProposal = () => {
+    navigate('/proposals/new');
+  };
+
+  const getFilteredProposalsByTab = () => {
+    switch (activeTab) {
+      case 0: // Alle
+        return filterProposals();
+      case 1: // Offen
+        return filterProposals().filter(p => p.status === 'sent');
+      case 2: // Akzeptiert
+        return filterProposals().filter(p => p.status === 'accepted');
+      case 3: // Abgelehnt
+        return filterProposals().filter(p => p.status === 'rejected');
+      default:
+        return filterProposals();
+    }
+  };
+
   return (
     <Box p={6}>
-      <Flex mb={6} align="center" justify="space-between" flexWrap="wrap" gap={4}>
+      <Flex justify="space-between" align="center" mb={6}>
         <Heading size="lg">Angebote</Heading>
         <Button
           leftIcon={<FiPlus />}
           colorScheme="blue"
-          onClick={() => navigate('/proposals/new')}
+          onClick={handleCreateProposal}
         >
           Neues Angebot
         </Button>
       </Flex>
 
-      <Stack direction={{ base: 'column', md: 'row' }} spacing={4} mb={6}>
-        <InputGroup maxW={{ base: 'full', md: '300px' }}>
-          <InputLeftElement pointerEvents="none">
-            <FiSearch color="gray.300" />
-          </InputLeftElement>
-          <Input
-            placeholder="Angebot suchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </InputGroup>
+      {/* Filter und Suche */}
+      <Box mb={6}>
+        <Tabs onChange={(index) => setActiveTab(index)} mb={4}>
+          <TabList>
+            <Tab>Alle</Tab>
+            <Tab>Offen</Tab>
+            <Tab>Akzeptiert</Tab>
+            <Tab>Abgelehnt</Tab>
+          </TabList>
+        </Tabs>
 
-        <Select
-          maxW={{ base: 'full', md: '200px' }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ProposalStatus | 'all')}
-        >
-          <option value="all">Alle Status</option>
-          <option value="draft">Entwurf</option>
-          <option value="sent">Gesendet</option>
-          <option value="accepted">Akzeptiert</option>
-          <option value="rejected">Abgelehnt</option>
-          <option value="expired">Abgelaufen</option>
-        </Select>
+        <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
+          <InputGroup maxW={{ base: 'full', md: '300px' }}>
+            <InputLeftElement pointerEvents="none">
+              <Icon as={FiSearch} color="gray.400" />
+            </InputLeftElement>
+            <Input
+              placeholder="Suchen..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </InputGroup>
 
-        <Select
-          maxW={{ base: 'full', md: '200px' }}
-          value={orderTypeFilter}
-          onChange={(e) => setOrderTypeFilter(e.target.value as OrderType | 'all')}
-        >
-          <option value="all">Alle Bestelltypen</option>
-          <option value="with_staff">Mit Personal</option>
-          <option value="with_staff_and_delivery">Mit Personal & Lieferung</option>
-          <option value="delivery_only">Nur Lieferung</option>
-          <option value="self_pickup">Selbstabholung</option>
-        </Select>
+          <Select
+            maxW={{ base: 'full', md: '200px' }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as ProposalStatus | 'all')}
+          >
+            <option value="all">Alle Status</option>
+            <option value="draft">Entwurf</option>
+            <option value="sent">Gesendet</option>
+            <option value="accepted">Akzeptiert</option>
+            <option value="rejected">Abgelehnt</option>
+          </Select>
 
-        <Popover>
-          <PopoverTrigger>
-            <Button leftIcon={<FiCalendar />} variant="outline">
-              Datumsbereich
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <PopoverHeader>Datumsbereich auswählen</PopoverHeader>
-            <PopoverArrow />
-            <PopoverCloseButton />
-            <PopoverBody>
-              <VStack spacing={4}>
-                <FormControl>
-                  <FormLabel>Von</FormLabel>
-                  <ChakraInput
-                    type="date"
-                    value={dateRange.start}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Bis</FormLabel>
-                  <ChakraInput
-                    type="date"
-                    value={dateRange.end}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  />
-                </FormControl>
-              </VStack>
-            </PopoverBody>
-          </PopoverContent>
-        </Popover>
+          <Select
+            maxW={{ base: 'full', md: '200px' }}
+            value={orderTypeFilter}
+            onChange={(e) => setOrderTypeFilter(e.target.value as OrderType | 'all')}
+          >
+            <option value="all">Alle Bestelltypen</option>
+            <option value="self_pickup">Selbstabholung</option>
+            <option value="delivery">Lieferung</option>
+            <option value="delivery_with_staff">Lieferung mit Personal</option>
+            <option value="with_staff">Mit Personal vor Ort</option>
+          </Select>
 
-        <Button
-          leftIcon={<FiDownload />}
-          onClick={exportToCSV}
-          variant="outline"
-        >
-          Exportieren
-        </Button>
-      </Stack>
+          <Popover>
+            <PopoverTrigger>
+              <Button leftIcon={<FiFilter />}>
+                Datum
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent>
+              <PopoverHeader>Datumsfilter</PopoverHeader>
+              <PopoverArrow />
+              <PopoverCloseButton />
+              <PopoverBody>
+                <VStack spacing={4}>
+                  <FormControl>
+                    <FormLabel>Von</FormLabel>
+                    <Input
+                      type="date"
+                      value={dateRange.start}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>Bis</FormLabel>
+                    <Input
+                      type="date"
+                      value={dateRange.end}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    />
+                  </FormControl>
+                </VStack>
+              </PopoverBody>
+            </PopoverContent>
+          </Popover>
+        </Stack>
+      </Box>
 
-      <TableContainer bg={bgColor} borderRadius="lg" boxShadow="sm">
+      {/* Angebotsliste */}
+      <TableContainer bg={bgColor} borderRadius="md" boxShadow="sm">
         <Table variant="simple">
           <Thead>
             <Tr>
               <Th>
                 <Checkbox
-                  isChecked={selectedProposals.length === paginatedProposals.length}
+                  isChecked={selectedProposals.length === filteredProposals.length}
                   onChange={(e) => handleSelectAll(e.target.checked)}
                 />
               </Th>
               <Th cursor="pointer" onClick={() => handleSort('number')}>
-                Nr. {sortConfig?.key === 'number' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                <HStack>
+                  <Text>Nummer</Text>
+                  {sortConfig.key === 'number' && (
+                    <Icon as={sortConfig.direction === 'asc' ? FiArrowUp : FiArrowDown} />
+                  )}
+                </HStack>
               </Th>
-              <Th cursor="pointer" onClick={() => handleSort('createdAt')}>
-                Datum {sortConfig?.key === 'createdAt' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              <Th cursor="pointer" onClick={() => handleSort('eventDate')}>
+                <HStack>
+                  <Text>Datum</Text>
+                  {sortConfig.key === 'eventDate' && (
+                    <Icon as={sortConfig.direction === 'asc' ? FiArrowUp : FiArrowDown} />
+                  )}
+                </HStack>
               </Th>
               <Th>Kunde</Th>
               <Th>Veranstaltung</Th>
               <Th>Bestelltyp</Th>
               <Th cursor="pointer" onClick={() => handleSort('totalAmount')}>
-                Betrag {sortConfig?.key === 'totalAmount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                <HStack>
+                  <Text>Betrag</Text>
+                  {sortConfig.key === 'totalAmount' && (
+                    <Icon as={sortConfig.direction === 'asc' ? FiArrowUp : FiArrowDown} />
+                  )}
+                </HStack>
               </Th>
               <Th>Status</Th>
-              <Th>Ablaufdatum</Th>
               <Th>Aktionen</Th>
             </Tr>
           </Thead>
           <Tbody>
-            {paginatedProposals.map((proposal) => {
-              const OrderTypeIcon = getOrderTypeIcon(proposal.orderType);
-              const isExpiringSoon = isAfter(new Date(proposal.expiryDate), new Date()) &&
-                                   isBefore(new Date(proposal.expiryDate), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-
-              return (
+            {isLoading ? (
+              <Tr>
+                <Td colSpan={9} textAlign="center">
+                  <Spinner />
+                </Td>
+              </Tr>
+            ) : paginatedProposals.length === 0 ? (
+              <Tr>
+                <Td colSpan={9} textAlign="center">
+                  <Text>Keine Angebote gefunden</Text>
+                </Td>
+              </Tr>
+            ) : (
+              paginatedProposals.map((proposal) => (
                 <Tr key={proposal.id}>
                   <Td>
                     <Checkbox
@@ -377,76 +481,48 @@ const ProposalsPage: React.FC = () => {
                     />
                   </Td>
                   <Td>{proposal.number}</Td>
-                  <Td>{format(new Date(proposal.createdAt), 'dd.MM.yyyy', { locale: de })}</Td>
-                  <Td>{proposal.clientId}</Td>
+                  <Td>{format(new Date(proposal.eventDate), 'dd.MM.yyyy', { locale: de })}</Td>
+                  <Td>{proposal.client.name}</Td>
                   <Td>{proposal.eventName}</Td>
                   <Td>
-                    <Tooltip label={proposal.orderType}>
-                      <Box>
-                        <OrderTypeIcon />
-                      </Box>
-                    </Tooltip>
+                    <OrderTypeIcon orderType={proposal.orderType} />
                   </Td>
-                  <Td>{proposal.totalAmount.toFixed(2)} €</Td>
+                  <Td>{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(proposal.totalAmount)}</Td>
                   <Td>
-                    <Badge colorScheme={getStatusColor(proposal.status)}>
-                      {proposal.status}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Tooltip label={isExpiringSoon ? 'Ablaufdatum nahe' : ''}>
-                      <Text color={isExpiringSoon ? 'orange.500' : 'inherit'}>
-                        {format(new Date(proposal.expiryDate), 'dd.MM.yyyy', { locale: de })}
-                      </Text>
-                    </Tooltip>
+                    <ProposalStatusBadge status={proposal.status} />
                   </Td>
                   <Td>
                     <Menu>
                       <MenuButton
                         as={IconButton}
-                        aria-label="Weitere Optionen"
                         icon={<FiMoreVertical />}
                         variant="ghost"
                         size="sm"
                       />
                       <MenuList>
-                        <MenuItem icon={<FiEye />} onClick={() => navigate(`/proposals/${proposal.id}`)}>
-                          Ansehen
+                        <MenuItem icon={<FiEye />} onClick={() => handleViewProposal(proposal.id)}>
+                          Anzeigen
                         </MenuItem>
-                        <MenuItem icon={<FiEdit2 />} onClick={() => navigate(`/proposals/${proposal.id}/edit`)}>
+                        <MenuItem icon={<FiEdit2 />} onClick={() => handleEditProposal(proposal.id)}>
                           Bearbeiten
                         </MenuItem>
-                        <MenuItem icon={<FiTrash2 />} color="red.500" onClick={() => handleDelete(proposal)}>
+                        <MenuItem icon={<FiDownload />} onClick={() => handleDownloadPDF(proposal)}>
+                          PDF herunterladen
+                        </MenuItem>
+                        <MenuItem icon={<FiTrash2 />} onClick={() => handleDelete(proposal)}>
                           Löschen
                         </MenuItem>
                       </MenuList>
                     </Menu>
                   </Td>
                 </Tr>
-              );
-            })}
+              ))
+            )}
           </Tbody>
         </Table>
       </TableContainer>
 
-      <Flex justify="center" mt={6} gap={2}>
-        <Button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          isDisabled={currentPage === 1}
-        >
-          Zurück
-        </Button>
-        <Text alignSelf="center">
-          Seite {currentPage} von {totalPages}
-        </Text>
-        <Button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          isDisabled={currentPage === totalPages}
-        >
-          Weiter
-        </Button>
-      </Flex>
-
+      {/* Löschbestätigung */}
       <AlertDialog
         isOpen={isOpen}
         leastDestructiveRef={cancelRef}
@@ -456,8 +532,7 @@ const ProposalsPage: React.FC = () => {
           <AlertDialogContent>
             <AlertDialogHeader>Angebot löschen</AlertDialogHeader>
             <AlertDialogBody>
-              Sind Sie sicher, dass Sie das Angebot "{selectedProposal?.number}" löschen möchten?
-              Diese Aktion kann nicht rückgängig gemacht werden.
+              Sind Sie sicher, dass Sie dieses Angebot löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>
@@ -470,6 +545,15 @@ const ProposalsPage: React.FC = () => {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      {/* PDF-Vorschau */}
+      {selectedProposal && (
+        <ProposalPdfPreview
+          isOpen={isPdfPreviewOpen}
+          onClose={onPdfPreviewClose}
+          proposal={selectedProposal}
+        />
+      )}
     </Box>
   );
 };

@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -7,441 +6,466 @@ import {
   Heading,
   Text,
   Badge,
-  IconButton,
+  HStack,
+  VStack,
+  Divider,
+  Icon,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
-  Divider,
-  VStack,
-  HStack,
-  Grid,
-  GridItem,
-  useToast,
   Tabs,
   TabList,
-  TabPanels,
   Tab,
+  TabPanels,
   TabPanel,
-  Card,
-  CardBody,
-  CardHeader,
-  Image,
-  Link,
-  Tooltip,
-  useClipboard,
   useDisclosure,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
+  useToast,
+  Grid,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  IconButton,
+  UnorderedList,
+  ListItem
 } from '@chakra-ui/react';
 import {
-  FiEdit2,
-  FiMail,
-  FiCheckSquare,
+  FiCalendar,
+  FiClock,
+  FiMapPin,
+  FiUsers,
+  FiEdit,
+  FiSend,
   FiDownload,
-  FiExternalLink,
-  FiCopy,
-  FiTrash2,
-  FiFileText,
+  FiEye,
+  FiLink,
+  FiMoreVertical,
+  FiDollarSign,
+  FiCheckCircle,
+  FiXCircle,
   FiTag,
   FiPaperclip,
-  FiDollarSign,
-  FiUsers,
-  FiTruck,
-  FiBox,
-  FiShoppingCart,
-  FiClock,
-  FiCalendar,
-  FiUser,
-  FiMapPin,
-  FiPhone,
-  FiGlobe,
-  FiMoreVertical,
+  FiTrash2,
+  FiCopy
 } from 'react-icons/fi';
-import { Proposal, OrderType, ProposalStatus } from '../../types/proposal';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Proposal } from '../../types/proposal';
 import { mockProposals } from '../../mock/proposals';
+import SendEmailModal from '../../components/proposals/SendEmailModal';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+import ProposalStatusBadge from '../../components/proposals/ProposalStatusBadge';
+import OrderTypeIcon from '../../components/proposals/OrderTypeIcon';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const ProposalDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useToast();
-  const { hasCopied, onCopy } = useClipboard('');
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const cancelRef = useRef<HTMLButtonElement>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  const {
+    isOpen: isEmailModalOpen,
+    onOpen: openEmailModal,
+    onClose: closeEmailModal
+  } = useDisclosure();
+
+  const {
+    isOpen: isDeleteModalOpen,
+    onOpen: openDeleteModal,
+    onClose: closeDeleteModal
+  } = useDisclosure();
+
+  // Daten beim ersten Render laden
   useEffect(() => {
-    const foundProposal = mockProposals.find(p => p.id === id);
-    if (foundProposal) {
-      setProposal(foundProposal);
-    } else {
+    if (!id) return;
+
+    const fetchProposal = async () => {
+      setIsLoading(true);
+      try {
+        // Temporär: Verwende Mock-Daten
+        const foundProposal = mockProposals.find(p => p.id === id);
+        if (foundProposal) {
+          setProposal(foundProposal);
+          setError(null);
+        } else {
+          setError('Angebot konnte nicht gefunden werden');
+        }
+      } catch (err) {
+        setError('Fehler beim Laden des Angebots');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProposal();
+  }, [id]);
+
+  // Handler für Aktionen
+  const handleEdit = () => {
+    navigate(`/proposals/edit/${id}`);
+  };
+
+  const handleDuplicate = async () => {
+    if (!proposal) return;
+
+    try {
+      // Temporär: Einfache Erfolgsmeldung
+      toast({
+        title: 'Angebot dupliziert',
+        description: 'Das Angebot wurde erfolgreich dupliziert.',
+        status: 'success',
+        duration: 3000,
+      });
+      navigate(`/proposals/${proposal.id}-copy`);
+    } catch (err) {
       toast({
         title: 'Fehler',
-        description: 'Angebot nicht gefunden.',
+        description: 'Das Angebot konnte nicht dupliziert werden.',
         status: 'error',
         duration: 3000,
-        isClosable: true,
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!proposal) return;
+
+    try {
+      // Temporär: Direkte Navigation zurück
+      toast({
+        title: 'Angebot gelöscht',
+        description: 'Das Angebot wurde erfolgreich gelöscht.',
+        status: 'success',
+        duration: 3000,
       });
       navigate('/proposals');
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: 'Das Angebot konnte nicht gelöscht werden.',
+        status: 'error',
+        duration: 3000,
+      });
+    } finally {
+      closeDeleteModal();
     }
-  }, [id, navigate, toast]);
-
-  if (!proposal) {
-    return null;
-  }
-
-  const getStatusColor = (status: ProposalStatus) => {
-    const colors = {
-      draft: 'gray',
-      sent: 'blue',
-      accepted: 'green',
-      rejected: 'red',
-      expired: 'orange',
-    };
-    return colors[status];
   };
 
-  const getOrderTypeIcon = (type: OrderType) => {
-    const icons = {
-      with_staff: FiUsers,
-      with_staff_and_delivery: FiTruck,
-      delivery_only: FiBox,
-      self_pickup: FiShoppingCart,
-    };
-    return icons[type];
+  const handleDownloadPdf = async () => {
+    if (!proposal) return;
+
+    try {
+      // Temporär: Erfolgsmeldung
+      toast({
+        title: 'PDF erstellt',
+        description: 'Das PDF wurde erfolgreich erstellt und heruntergeladen.',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (err) {
+      toast({
+        title: 'Fehler',
+        description: 'Das PDF konnte nicht erstellt werden.',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
-  const OrderTypeIcon = getOrderTypeIcon(proposal.orderType);
+  const handleCopyClientLink = () => {
+    if (!proposal) return;
 
-  const handleDelete = () => {
-    // Hier würde die API-Aufruf erfolgen
-    toast({
-      title: 'Angebot gelöscht',
-      description: 'Das Angebot wurde erfolgreich gelöscht.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-    navigate('/proposals');
-  };
+    const clientLink = `${window.location.origin}/proposals/client-view/${proposal.id}`;
+    navigator.clipboard.writeText(clientLink);
 
-  const handleSendEmail = () => {
-    // Hier würde die E-Mail-Versand-Logik implementiert
-    toast({
-      title: 'E-Mail gesendet',
-      description: 'Das Angebot wurde per E-Mail versendet.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  };
-
-  const handleMarkAsAccepted = () => {
-    // Hier würde die Status-Update-Logik implementiert
-    toast({
-      title: 'Status aktualisiert',
-      description: 'Das Angebot wurde als akzeptiert markiert.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  };
-
-  const handleDownloadPDF = () => {
-    // Hier würde die PDF-Generierung implementiert
-    toast({
-      title: 'PDF heruntergeladen',
-      description: 'Das Angebot wurde als PDF heruntergeladen.',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-  };
-
-  const handleCopyLink = () => {
-    // Hier würde die Link-Generierung implementiert
-    onCopy();
     toast({
       title: 'Link kopiert',
       description: 'Der Link zur Kundenansicht wurde in die Zwischenablage kopiert.',
       status: 'success',
       duration: 3000,
-      isClosable: true,
     });
   };
 
+  const handleViewAsClient = () => {
+    if (!proposal) return;
+    window.open(`/proposals/client-view/${proposal.id}`, '_blank');
+  };
+
+  // Render-Funktion für den Inhalt
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error || !proposal) {
+    return (
+      <Box p={8} textAlign="center">
+        <Heading size="md" mb={4} color="red.500">
+          {error || 'Angebot nicht gefunden'}
+        </Heading>
+        <Button onClick={() => navigate('/proposals')}>
+          Zurück zur Übersicht
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box p={6}>
-      {/* Header */}
-      <Flex mb={6} align="center" justify="space-between" flexWrap="wrap" gap={4}>
+      {/* Header-Bereich */}
+      <Flex
+        justify="space-between"
+        align={{ base: 'flex-start', md: 'center' }}
+        direction={{ base: 'column', md: 'row' }}
+        mb={6}
+        gap={4}
+      >
         <Box>
-          <Heading size="lg">{proposal.eventName}</Heading>
-          <Text color="gray.500">Angebot {proposal.number}</Text>
+          <HStack mb={2}>
+            <ProposalStatusBadge status={proposal.status} />
+            <OrderTypeIcon orderType={proposal.orderType} withLabel />
+          </HStack>
+          <Heading size="lg">{proposal.eventName || `Angebot ${proposal.number}`}</Heading>
+          <Text color="gray.600" mt={1}>
+            Angebots-Nr.: {proposal.number} | Erstellt am: {new Date(proposal.createdAt).toLocaleDateString('de-DE')}
+          </Text>
         </Box>
-        <HStack spacing={2}>
-          <Badge colorScheme={getStatusColor(proposal.status)} fontSize="md" px={3} py={1}>
-            {proposal.status}
-          </Badge>
-          <Tooltip label={proposal.orderType}>
-            <Box>
-              <OrderTypeIcon size={24} />
-            </Box>
-          </Tooltip>
+
+        <HStack spacing={2} wrap="wrap">
+          <Button leftIcon={<FiEdit />} onClick={handleEdit}>
+            Bearbeiten
+          </Button>
+          <Button leftIcon={<FiSend />} colorScheme="blue" onClick={openEmailModal}>
+            Senden
+          </Button>
+          <Menu>
+            <MenuButton as={Button} rightIcon={<FiMoreVertical />}>
+              Aktionen
+            </MenuButton>
+            <MenuList>
+              <MenuItem icon={<FiDownload />} onClick={handleDownloadPdf}>
+                PDF herunterladen
+              </MenuItem>
+              <MenuItem icon={<FiEye />} onClick={handleViewAsClient}>
+                Kundenansicht öffnen
+              </MenuItem>
+              <MenuItem icon={<FiLink />} onClick={handleCopyClientLink}>
+                Link für Kunden kopieren
+              </MenuItem>
+              <MenuItem icon={<FiCopy />} onClick={handleDuplicate}>
+                Duplizieren
+              </MenuItem>
+              <MenuItem icon={<FiTrash2 />} onClick={openDeleteModal} color="red.500">
+                Löschen
+              </MenuItem>
+            </MenuList>
+          </Menu>
         </HStack>
       </Flex>
 
-      {/* Aktionsleiste */}
-      <Flex mb={6} gap={2} flexWrap="wrap">
-        <Button leftIcon={<FiEdit2 />} onClick={() => navigate(`/proposals/${id}/edit`)}>
-          Bearbeiten
-        </Button>
-        <Button leftIcon={<FiMail />} onClick={handleSendEmail}>
-          Per E-Mail senden
-        </Button>
-        <Button leftIcon={<FiCheckSquare />} onClick={handleMarkAsAccepted}>
-          Als akzeptiert markieren
-        </Button>
-        <Button leftIcon={<FiDownload />} onClick={handleDownloadPDF}>
-          PDF herunterladen
-        </Button>
-        <Button leftIcon={<FiExternalLink />} onClick={() => window.open(`/proposals/${id}/client`, '_blank')}>
-          Kundenansicht öffnen
-        </Button>
-        <Button leftIcon={<FiCopy />} onClick={handleCopyLink}>
-          Link kopieren
-        </Button>
-        <Menu>
-          <MenuButton
-            as={IconButton}
-            aria-label="Weitere Optionen"
-            icon={<FiMoreVertical />}
-            variant="ghost"
-          />
-          <MenuList>
-            <MenuItem icon={<FiDollarSign />}>Anzahlung als erhalten markieren</MenuItem>
-            <MenuItem icon={<FiFileText />}>Duplizieren</MenuItem>
-            <MenuItem icon={<FiTag />}>Tag hinzufügen</MenuItem>
-            <MenuItem icon={<FiPaperclip />}>Dokument anhängen</MenuItem>
-            <MenuItem icon={<FiFileText />}>Zur Rechnung konvertieren</MenuItem>
-            <MenuItem icon={<FiTrash2 />} color="red.500" onClick={onOpen}>
-              Löschen
-            </MenuItem>
-          </MenuList>
-        </Menu>
-      </Flex>
-
       {/* Hauptinhalt */}
-      <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-        <GridItem>
-          <Tabs onChange={(index) => setSelectedTab(index)}>
-            <TabList>
-              <Tab>Details</Tab>
-              <Tab>Positionen</Tab>
-              <Tab>Dokumente</Tab>
-              <Tab>Aktivität</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                <VStack spacing={6} align="stretch">
-                  {/* Kundendaten */}
-                  <Card>
-                    <CardHeader>
-                      <Heading size="md">Kundendaten</Heading>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <HStack>
-                          <FiUser />
-                          <Text>{proposal.clientInfo.name}</Text>
-                        </HStack>
-                        <HStack>
-                          <FiMapPin />
-                          <Text>{proposal.clientInfo.address}</Text>
-                        </HStack>
-                        <HStack>
-                          <FiPhone />
-                          <Text>{proposal.clientInfo.phone}</Text>
-                        </HStack>
-                        <HStack>
-                          <FiGlobe />
-                          <Text>{proposal.clientInfo.email}</Text>
-                        </HStack>
-                      </VStack>
-                    </CardBody>
-                  </Card>
+      <Tabs colorScheme="blue" variant="enclosed">
+        <TabList>
+          <Tab>Übersicht</Tab>
+          <Tab>Positionen</Tab>
+          <Tab>Dokumente</Tab>
+          <Tab>Aktivitäten</Tab>
+        </TabList>
 
-                  {/* Veranstaltungsdetails */}
-                  <Card>
-                    <CardHeader>
-                      <Heading size="md">Veranstaltungsdetails</Heading>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <HStack>
-                          <FiCalendar />
-                          <Text>Veranstaltung: {proposal.eventName}</Text>
-                        </HStack>
-                        <HStack>
-                          <FiClock />
-                          <Text>Bestelltyp: {proposal.orderType}</Text>
-                        </HStack>
-                        <Text>{proposal.introText}</Text>
-                      </VStack>
-                    </CardBody>
-                  </Card>
+        <TabPanels>
+          {/* Übersicht-Tab */}
+          <TabPanel>
+            <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={6}>
+              {/* Linke Spalte */}
+              <Box>
+                {/* Kundeninformationen */}
+                <Box bg="white" p={6} borderRadius="md" boxShadow="sm" mb={6}>
+                  <Heading size="md" mb={4}>Kundeninformationen</Heading>
+                  <VStack align="flex-start" spacing={2}>
+                    <Text fontWeight="bold">{proposal.clientId}</Text>
+                    <Text>{proposal.eventName}</Text>
+                  </VStack>
+                </Box>
 
-                  {/* Angebotspositionen */}
-                  <Card>
-                    <CardHeader>
-                      <Heading size="md">Angebotspositionen</Heading>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        {proposal.items.map((item) => (
-                          <Box key={item.id} p={4} borderWidth="1px" borderRadius="md">
-                            <Text fontWeight="bold">{item.name}</Text>
-                            <Text color="gray.600">{item.description}</Text>
-                            <HStack mt={2}>
-                              <Text>{item.quantity} {item.unit}</Text>
-                              <Text>x</Text>
-                              <Text>{item.price.toFixed(2)} €</Text>
-                              <Text>=</Text>
-                              <Text fontWeight="bold">{item.total.toFixed(2)} €</Text>
-                            </HStack>
-                            {item.subItems && (
-                              <VStack align="stretch" mt={2} pl={4}>
-                                {item.subItems.map((subItem) => (
-                                  <HStack key={subItem.id} justify="space-between">
-                                    <Text>{subItem.name}</Text>
-                                    <Text>{subItem.quantity} x {subItem.price.toFixed(2)} €</Text>
-                                  </HStack>
-                                ))}
-                              </VStack>
+                {/* Veranstaltungsinformationen */}
+                <Box bg="white" p={6} borderRadius="md" boxShadow="sm">
+                  <Heading size="md" mb={4}>Veranstaltungsinformationen</Heading>
+                  <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
+                    <VStack align="flex-start" spacing={3}>
+                      <HStack>
+                        <Icon as={FiCalendar} color="blue.500" />
+                        <Text fontWeight="medium">Datum:</Text>
+                        <Text>{new Date(proposal.eventDate).toLocaleDateString('de-DE')}</Text>
+                      </HStack>
+
+                      <HStack>
+                        <Icon as={FiUsers} color="blue.500" />
+                        <Text fontWeight="medium">Format:</Text>
+                        <Text>{proposal.eventFormat}</Text>
+                      </HStack>
+                    </VStack>
+                  </Grid>
+
+                  {proposal.introText && (
+                    <Box mt={4}>
+                      <Text fontWeight="medium">Beschreibung:</Text>
+                      <Text mt={2}>{proposal.introText}</Text>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Rechte Spalte */}
+              <Box>
+                {/* Finanzdaten */}
+                <Box bg="white" p={6} borderRadius="md" boxShadow="sm" mb={6}>
+                  <Heading size="md" mb={4}>Finanzdaten</Heading>
+                  <VStack align="stretch" spacing={3}>
+                    <Flex justify="space-between">
+                      <Text>Zwischensumme:</Text>
+                      <Text>{proposal.subtotal.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</Text>
+                    </Flex>
+                    <Flex justify="space-between">
+                      <Text>MwSt. ({proposal.taxRate}%):</Text>
+                      <Text>{proposal.taxAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</Text>
+                    </Flex>
+                    <Divider />
+                    <Flex justify="space-between" fontWeight="bold">
+                      <Text>Gesamtbetrag:</Text>
+                      <Text>{proposal.totalAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</Text>
+                    </Flex>
+                  </VStack>
+                </Box>
+
+                {/* Status */}
+                <Box bg="white" p={6} borderRadius="md" boxShadow="sm">
+                  <Heading size="md" mb={4}>Status</Heading>
+                  <VStack align="flex-start" spacing={4}>
+                    <HStack>
+                      <Text fontWeight="medium">Aktueller Status:</Text>
+                      <ProposalStatusBadge status={proposal.status} />
+                    </HStack>
+
+                    <HStack>
+                      <Text fontWeight="medium">Bestelltyp:</Text>
+                      <OrderTypeIcon orderType={proposal.orderType} withLabel />
+                    </HStack>
+                  </VStack>
+                </Box>
+              </Box>
+            </Grid>
+          </TabPanel>
+
+          {/* Positionen-Tab */}
+          <TabPanel>
+            <Box bg="white" p={6} borderRadius="md" boxShadow="sm">
+              <Heading size="md" mb={6}>Angebotspositionen</Heading>
+              {proposal.items.length === 0 ? (
+                <Text color="gray.500">Keine Positionen gefunden</Text>
+              ) : (
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Position</Th>
+                      <Th isNumeric>Menge</Th>
+                      <Th isNumeric>Einzelpreis</Th>
+                      <Th isNumeric>Gesamtpreis</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {proposal.items.map(item => (
+                      <Tr key={item.id}>
+                        <Td>
+                          <VStack align="flex-start" spacing={1}>
+                            <Text fontWeight="medium">{item.name}</Text>
+                            {item.description && (
+                              <Text fontSize="sm" color="gray.600">{item.description}</Text>
                             )}
-                          </Box>
-                        ))}
-                      </VStack>
-                    </CardBody>
-                  </Card>
+                          </VStack>
+                        </Td>
+                        <Td isNumeric>{item.quantity} {item.unit}</Td>
+                        <Td isNumeric>{item.unitPrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</Td>
+                        <Td isNumeric>{(item.quantity * item.unitPrice).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              )}
+            </Box>
+          </TabPanel>
+
+          {/* Dokumente-Tab */}
+          <TabPanel>
+            <Box bg="white" p={6} borderRadius="md" boxShadow="sm">
+              <Flex justify="space-between" align="center" mb={4}>
+                <Heading size="md">Dokumente</Heading>
+                <Button leftIcon={<FiPaperclip />} size="sm">
+                  Dokument hinzufügen
+                </Button>
+              </Flex>
+              <Text color="gray.500">Keine Dokumente angehängt</Text>
+            </Box>
+          </TabPanel>
+
+          {/* Aktivitäten-Tab */}
+          <TabPanel>
+            <Box bg="white" p={6} borderRadius="md" boxShadow="sm">
+              <Heading size="md" mb={4}>Aktivitäten</Heading>
+              {proposal.history && proposal.history.length > 0 ? (
+                <VStack spacing={4} align="stretch">
+                  {proposal.history.map(activity => (
+                    <Box
+                      key={activity.id}
+                      p={3}
+                      borderLeftWidth="3px"
+                      borderLeftColor="blue.500"
+                      bg="gray.50"
+                      borderRadius="md"
+                    >
+                      <Flex justify="space-between" mb={1}>
+                        <Text fontWeight="medium">{activity.action}</Text>
+                        <Text fontSize="sm" color="gray.500">
+                          {new Date(activity.date).toLocaleString('de-DE')}
+                        </Text>
+                      </Flex>
+                      <Text>{activity.details}</Text>
+                      <Text fontSize="sm" mt={1}>
+                        Von: {activity.user}
+                      </Text>
+                    </Box>
+                  ))}
                 </VStack>
-              </TabPanel>
+              ) : (
+                <Text color="gray.500">Keine Aktivitäten aufgezeichnet</Text>
+              )}
+            </Box>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
-              <TabPanel>
-                {/* Hier würde die detaillierte Positionsansicht implementiert */}
-                <Text>Positionsansicht wird implementiert...</Text>
-              </TabPanel>
+      {/* Modals */}
+      <SendEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={closeEmailModal}
+        proposalId={proposal.id}
+        clientEmail={proposal.clientId}
+        clientName={proposal.clientId}
+      />
 
-              <TabPanel>
-                {/* Hier würde die Dokumentenverwaltung implementiert */}
-                <Text>Dokumentenverwaltung wird implementiert...</Text>
-              </TabPanel>
-
-              <TabPanel>
-                {/* Hier würde das Aktivitätsprotokoll implementiert */}
-                <Text>Aktivitätsprotokoll wird implementiert...</Text>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </GridItem>
-
-        <GridItem>
-          <VStack spacing={6} align="stretch">
-            {/* Wichtige Daten */}
-            <Card>
-              <CardHeader>
-                <Heading size="md">Wichtige Daten</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack align="stretch" spacing={4}>
-                  <HStack justify="space-between">
-                    <Text>Erstellt am:</Text>
-                    <Text>{format(new Date(proposal.createdAt), 'dd.MM.yyyy', { locale: de })}</Text>
-                  </HStack>
-                  <HStack justify="space-between">
-                    <Text>Gültig bis:</Text>
-                    <Text>{format(new Date(proposal.expiryDate), 'dd.MM.yyyy', { locale: de })}</Text>
-                  </HStack>
-                  <HStack justify="space-between">
-                    <Text>Status:</Text>
-                    <Badge colorScheme={getStatusColor(proposal.status)}>
-                      {proposal.status}
-                    </Badge>
-                  </HStack>
-                </VStack>
-              </CardBody>
-            </Card>
-
-            {/* Finanzdaten */}
-            <Card>
-              <CardHeader>
-                <Heading size="md">Finanzdaten</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack align="stretch" spacing={4}>
-                  <HStack justify="space-between">
-                    <Text>Zwischensumme:</Text>
-                    <Text>{proposal.subtotal.toFixed(2)} €</Text>
-                  </HStack>
-                  <HStack justify="space-between">
-                    <Text>MwSt. ({proposal.taxRate}%):</Text>
-                    <Text>{proposal.taxAmount.toFixed(2)} €</Text>
-                  </HStack>
-                  <Divider />
-                  <HStack justify="space-between" fontWeight="bold">
-                    <Text>Gesamtbetrag:</Text>
-                    <Text>{proposal.totalAmount.toFixed(2)} €</Text>
-                  </HStack>
-                </VStack>
-              </CardBody>
-            </Card>
-
-            {/* Zahlungsinformationen */}
-            <Card>
-              <CardHeader>
-                <Heading size="md">Zahlungsinformationen</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack align="stretch" spacing={4}>
-                  <Text>{proposal.paymentTerms}</Text>
-                  <Text>{proposal.termsAndConditions}</Text>
-                </VStack>
-              </CardBody>
-            </Card>
-          </VStack>
-        </GridItem>
-      </Grid>
-
-      {/* Lösch-Dialog */}
-      <AlertDialog
-        isOpen={isOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={onClose}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader>Angebot löschen</AlertDialogHeader>
-            <AlertDialogBody>
-              Sind Sie sicher, dass Sie das Angebot "{proposal.number}" löschen möchten?
-              Diese Aktion kann nicht rückgängig gemacht werden.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onClose}>
-                Abbrechen
-              </Button>
-              <Button colorScheme="red" onClick={handleDelete} ml={3}>
-                Löschen
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDelete}
+        title="Angebot löschen"
+        message="Sind Sie sicher, dass Sie dieses Angebot löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirmText="Löschen"
+        confirmColorScheme="red"
+      />
     </Box>
   );
 };

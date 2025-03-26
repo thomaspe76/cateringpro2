@@ -1,242 +1,187 @@
-import { Proposal, ProposalStatus, OrderType } from '../types/proposal';
+import { Proposal } from '../types/proposal';
 
 export const mockProposals: Proposal[] = [
   {
     id: '1',
-    number: 'AN-2024-001',
-    clientId: 'CL-001',
-    eventId: 'EV-001',
+    number: 'A-2024-001',
+    clientId: 'client-1',
     eventName: 'Weihnachtsfeier 2024',
-    orderType: 'with_staff_and_delivery',
+    eventFormat: 'Firmenfeier',
+    eventDate: '2024-12-20',
+    eventStartTime: '18:00',
+    eventEndTime: '23:00',
+    eventLocation: 'Festsaal Lindenhof',
+    eventAddress: 'Lindenstraße 123, 12345 Berlin',
+    guests: 100,
     status: 'sent',
-    createdAt: '2024-03-15T10:00:00Z',
-    updatedAt: '2024-03-15T10:00:00Z',
-    validUntil: '2024-04-15T23:59:59Z',
-    expiryDate: '2024-04-15T23:59:59Z',
-    introText: 'Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen ein individuelles Angebot für Ihre Weihnachtsfeier unterbreiten zu können.',
+    orderType: 'with_staff_and_delivery',
+    introText: 'Vielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen folgendes Angebot für Ihre Weihnachtsfeier unterbreiten zu können.',
     items: [
       {
-        id: '1',
+        id: 'item-1',
+        name: 'Weihnachtliches Buffet',
+        description: 'Festliches Buffet mit traditionellen und modernen Gerichten',
         category: 'food',
-        name: 'Weihnachtliches 3-Gänge-Menü',
-        description: 'Traditionelles Weihnachtsmenü mit Suppe, Hauptgang und Dessert',
-        quantity: 50,
-        unit: 'Portion',
-        price: 45.00,
-        total: 2250.00,
+        quantity: 100,
+        unit: 'Person',
+        unitPrice: 45.00,
+        taxRate: 19,
         subItems: [
           {
-            id: '1-1',
-            name: 'Kürbissuppe',
-            quantity: 50,
+            id: 'sub-1',
+            name: 'Vorspeisen und Salate',
+            quantity: 1,
             unit: 'Portion',
-            price: 8.00,
-            description: 'Cremige Kürbissuppe mit Croutons'
+            price: 15.00
           },
           {
-            id: '1-2',
-            name: 'Gefüllte Pute',
-            quantity: 50,
+            id: 'sub-2',
+            name: 'Hauptgerichte',
+            quantity: 1,
             unit: 'Portion',
-            price: 25.00,
-            description: 'Gefüllte Pute mit Rotkohl und Klößen'
-          },
-          {
-            id: '1-3',
-            name: 'Weihnachtspudding',
-            quantity: 50,
-            unit: 'Portion',
-            price: 12.00,
-            description: 'Klassischer Weihnachtspudding mit Vanillesauce'
+            price: 25.00
           }
         ]
       },
       {
-        id: '2',
-        category: 'beverages',
-        name: 'Getränkepaket',
-        description: 'Auswahl an alkoholfreien Getränken',
-        quantity: 50,
+        id: 'item-2',
+        name: 'Getränkepauschale',
+        description: 'Softgetränke, Bier, Wein und Sekt',
+        category: 'beverage',
+        quantity: 100,
         unit: 'Person',
-        price: 15.00,
-        total: 750.00
-      },
-      {
-        id: '3',
-        category: 'staff',
-        name: 'Servicepersonal',
-        description: 'Erfahrenes Servicepersonal für die Bewirtung',
-        quantity: 5,
-        unit: 'Person',
-        price: 150.00,
-        total: 750.00
-      },
-      {
-        id: '4',
-        category: 'delivery',
-        name: 'Lieferung',
-        description: 'Lieferung und Aufbau vor Ort',
-        quantity: 1,
-        unit: 'Pauschale',
-        price: 200.00,
-        total: 200.00
+        unitPrice: 29.00,
+        taxRate: 19
       }
     ],
-    subtotal: 3950.00,
+    subtotal: 7400.00,
     taxRate: 19,
-    taxAmount: 750.50,
-    totalAmount: 4700.50,
-    notes: 'Bitte beachten Sie, dass die Preise für Getränke vor Ort separat abgerechnet werden.',
-    termsAndConditions: 'Standard AGBs für Catering-Services',
-    paymentTerms: 'Rechnungstellung erfolgt nach der Veranstaltung, Zahlungsziel 14 Tage',
-    companyInfo: {
-      name: 'CateringPro GmbH',
-      address: 'Musterstraße 123, 12345 Berlin',
-      phone: '+49 30 123456789',
-      email: 'info@cateringpro.de',
-      website: 'www.cateringpro.de',
-      taxId: '123/456/78901',
-      vatId: 'DE123456789'
-    },
-    clientInfo: {
-      name: 'Musterfirma GmbH',
-      address: 'Beispielweg 45, 54321 München',
-      contactPerson: 'Max Mustermann',
-      email: 'max.mustermann@musterfirma.de',
-      phone: '+49 89 987654321'
-    },
-    settings: {
-      language: 'de',
-      currency: 'EUR',
-      dateFormat: 'DD.MM.YYYY',
-      timeFormat: 'HH:mm',
-      showPrices: true,
-      showTaxes: true,
-      showTotals: true
-    },
-    emailTemplates: {
-      subject: 'Ihr Angebot für die Weihnachtsfeier 2024',
-      body: 'Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen ein individuelles Angebot für Ihre Weihnachtsfeier unterbreiten zu können.\n\nMit freundlichen Grüßen\nIhr CateringPro Team',
-      footer: 'CateringPro GmbH - Ihr Partner für exklusive Catering-Services'
-    },
-    tags: ['weihnachten', 'unternehmen', 'feier'],
-    attachments: [
-      {
-        id: '1',
-        name: 'AGBs.pdf',
-        type: 'application/pdf',
-        url: '/documents/agbs.pdf',
-        size: 1024
-      }
-    ],
+    taxAmount: 1406.00,
+    totalAmount: 8806.00,
+    depositAmount: 2000.00,
+    depositDueDate: '2024-11-20',
+    depositReceived: false,
+    paymentTerms: 'Zahlung innerhalb von 14 Tagen nach Rechnungsstellung',
+    termsAndConditions: 'Es gelten unsere allgemeinen Geschäftsbedingungen',
+    validUntil: '2024-11-01',
+    createdAt: '2024-10-01T10:00:00Z',
+    updatedAt: '2024-10-01T10:00:00Z',
     history: [
       {
-        id: '1',
-        date: '2024-03-15T10:00:00Z',
-        action: 'created',
-        userId: 'US-001',
-        details: 'Angebot erstellt'
+        id: 'hist-1',
+        date: '2024-10-01T10:00:00Z',
+        action: 'Erstellt',
+        details: 'Angebot wurde erstellt',
+        user: 'Max Mustermann'
       },
       {
-        id: '2',
-        date: '2024-03-15T11:00:00Z',
-        action: 'sent',
-        userId: 'US-001',
-        details: 'Angebot per E-Mail versendet'
+        id: 'hist-2',
+        date: '2024-10-01T11:00:00Z',
+        action: 'Gesendet',
+        details: 'Angebot wurde per E-Mail versendet',
+        user: 'Max Mustermann'
       }
-    ]
+    ],
+    tags: ['weihnachten', 'firmenfeier'],
+    companyInfo: {
+      name: 'CateringPro GmbH',
+      address: 'Hauptstraße 1, 10115 Berlin',
+      phone: '+49 30 123456',
+      email: 'info@cateringpro.de',
+      website: 'www.cateringpro.de',
+      taxId: 'DE123456789',
+      vatId: 'UST-ID123'
+    },
+    settings: {
+      template: 'premium',
+      language: 'de',
+      currency: 'EUR',
+      taxRate: 19,
+      showPrices: true,
+      showSubItems: true
+    },
+    emailTemplates: [
+      {
+        id: 'template-1',
+        name: 'Standard-Vorlage',
+        subject: 'Ihr Angebot für die Weihnachtsfeier',
+        body: 'Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage...',
+        isDefault: true
+      }
+    ],
+    lastSentDate: '2024-10-01T11:00:00Z',
+    createdBy: 'max.mustermann',
+    lastModifiedBy: 'max.mustermann'
   },
   {
     id: '2',
-    number: 'AN-2024-002',
-    clientId: 'CL-002',
-    eventId: 'EV-002',
+    number: 'A-2024-002',
+    clientId: 'client-2',
     eventName: 'Sommerfest 2024',
-    orderType: 'delivery_only',
+    eventFormat: 'Firmenevent',
+    eventDate: '2024-07-15',
+    eventStartTime: '14:00',
+    eventEndTime: '22:00',
+    eventLocation: 'Stadtpark',
+    eventAddress: 'Parkweg 1, 12345 Berlin',
+    guests: 150,
     status: 'draft',
-    createdAt: '2024-03-16T09:00:00Z',
-    updatedAt: '2024-03-16T09:00:00Z',
-    validUntil: '2024-04-16T23:59:59Z',
-    expiryDate: '2024-04-16T23:59:59Z',
-    introText: 'Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen ein individuelles Angebot für Ihr Sommerfest unterbreiten zu können.',
+    orderType: 'with_staff_and_delivery',
+    introText: 'Hier finden Sie unser Angebot für Ihr Sommerfest.',
     items: [
       {
-        id: '1',
+        id: 'item-3',
+        name: 'BBQ-Buffet',
+        description: 'Grillspezialitäten mit verschiedenen Beilagen',
         category: 'food',
-        name: 'Grillpaket Premium',
-        description: 'Umfangreiches Grillpaket mit verschiedenen Fleischsorten und Beilagen',
-        quantity: 100,
+        quantity: 150,
         unit: 'Person',
-        price: 35.00,
-        total: 3500.00
+        unitPrice: 35.00,
+        taxRate: 19
       },
       {
-        id: '2',
-        category: 'beverages',
-        name: 'Getränkepaket',
-        description: 'Auswahl an alkoholfreien Getränken',
-        quantity: 100,
+        id: 'item-4',
+        name: 'Getränkepauschale',
+        description: 'Alkoholfreie Getränke und Bier',
+        category: 'beverage',
+        quantity: 150,
         unit: 'Person',
-        price: 15.00,
-        total: 1500.00
-      },
-      {
-        id: '3',
-        category: 'delivery',
-        name: 'Lieferung',
-        description: 'Lieferung und Aufbau vor Ort',
-        quantity: 1,
-        unit: 'Pauschale',
-        price: 200.00,
-        total: 200.00
+        unitPrice: 25.00,
+        taxRate: 19
       }
     ],
-    subtotal: 5200.00,
+    subtotal: 9000.00,
     taxRate: 19,
-    taxAmount: 988.00,
-    totalAmount: 6188.00,
-    notes: 'Bitte beachten Sie, dass die Preise für Getränke vor Ort separat abgerechnet werden.',
-    termsAndConditions: 'Standard AGBs für Catering-Services',
-    paymentTerms: 'Rechnungstellung erfolgt nach der Veranstaltung, Zahlungsziel 14 Tage',
-    companyInfo: {
-      name: 'CateringPro GmbH',
-      address: 'Musterstraße 123, 12345 Berlin',
-      phone: '+49 30 123456789',
-      email: 'info@cateringpro.de',
-      website: 'www.cateringpro.de',
-      taxId: '123/456/78901',
-      vatId: 'DE123456789'
-    },
-    clientInfo: {
-      name: 'Beispiel GmbH',
-      address: 'Testweg 78, 98765 Hamburg',
-      contactPerson: 'Anna Schmidt',
-      email: 'anna.schmidt@beispiel.de',
-      phone: '+49 40 123456789'
-    },
-    settings: {
-      language: 'de',
-      currency: 'EUR',
-      dateFormat: 'DD.MM.YYYY',
-      timeFormat: 'HH:mm',
-      showPrices: true,
-      showTaxes: true,
-      showTotals: true
-    },
-    emailTemplates: {
-      subject: 'Ihr Angebot für das Sommerfest 2024',
-      body: 'Sehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Anfrage. Wir freuen uns, Ihnen ein individuelles Angebot für Ihr Sommerfest unterbreiten zu können.\n\nMit freundlichen Grüßen\nIhr CateringPro Team',
-      footer: 'CateringPro GmbH - Ihr Partner für exklusive Catering-Services'
-    },
-    tags: ['sommer', 'fest', 'grillen'],
+    taxAmount: 1710.00,
+    totalAmount: 10710.00,
+    validUntil: '2024-06-15',
+    createdAt: '2024-05-15T09:00:00Z',
+    updatedAt: '2024-05-15T09:00:00Z',
     history: [
       {
-        id: '1',
-        date: '2024-03-16T09:00:00Z',
-        action: 'created',
-        userId: 'US-001',
-        details: 'Angebot erstellt'
+        id: 'hist-3',
+        date: '2024-05-15T09:00:00Z',
+        action: 'Erstellt',
+        details: 'Angebot wurde erstellt',
+        user: 'Anna Schmidt'
       }
-    ]
+    ],
+    tags: ['sommer', 'bbq'],
+    companyInfo: {
+      name: 'CateringPro GmbH',
+      address: 'Hauptstraße 1, 10115 Berlin',
+      phone: '+49 30 123456',
+      email: 'info@cateringpro.de'
+    },
+    settings: {
+      template: 'standard',
+      language: 'de',
+      currency: 'EUR',
+      taxRate: 19,
+      showPrices: true,
+      showSubItems: true
+    },
+    createdBy: 'anna.schmidt',
+    lastModifiedBy: 'anna.schmidt'
   }
 ]; 
